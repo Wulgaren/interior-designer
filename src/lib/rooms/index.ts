@@ -19,3 +19,15 @@ export {
   validateRoomName,
 } from "./validation"
 export type { FieldErrors, ValidationResult } from "./validation"
+export {
+  cmToUnit,
+  DIMENSION_UNITS,
+  formatCmForUnit,
+  formatLimitForUnit,
+  formatRoomDimensions,
+  readStoredDimensionUnit,
+  unitToCm,
+  validateDimensionInUnit,
+  writeStoredDimensionUnit,
+  type DimensionUnit,
+} from "./units"

@@ -4,18 +4,16 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 
-import { useRoomsStore, type Room } from "@/lib/rooms"
+import { formatRoomDimensions, useRoomsStore, type Room } from "@/lib/rooms"
 
 import { RoomsHeader } from "./RoomsHeader"
-
-function formatDimensions(room: Room): string {
-  return `${Math.round(room.lengthCm)} × ${Math.round(room.widthCm)} × ${Math.round(room.heightCm)} cm`
-}
+import { useDimensionUnit } from "./useDimensionUnit"
 
 export function RoomList() {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [creating, setCreating] = useState(false)
+  const [unit] = useDimensionUnit()
 
   const rooms = useRoomsStore((state) => state.rooms)
   const loading = useRoomsStore((state) => state.loading)
@@ -114,7 +112,7 @@ export function RoomList() {
                       {room.name}
                     </Link>
                     <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                      {formatDimensions(room)}
+                      {formatRoomDimensions(room, unit)}
                     </p>
                     <Link
                       href={`/pomieszczenia/${room.id}`}

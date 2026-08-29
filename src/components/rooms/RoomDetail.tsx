@@ -7,17 +7,22 @@ import { useEffect, useState } from "react"
 
 import type { EditMode } from "@/components/room-scene"
 import {
+  formatCmForUnit,
   MAX_DIMENSION_CM,
   MIN_DIMENSION_CM,
+  unitToCm,
   useRoomsStore,
-  validateDimensionCm,
+  validateDimensionInUnit,
   validateRoomName,
+  type DimensionUnit,
   type FieldErrors,
   type RoomWritableFields,
 } from "@/lib/rooms"
 
 import { ModeToggle } from "./ModeToggle"
 import { RoomsHeader } from "./RoomsHeader"
+import { UnitToggle } from "./UnitToggle"
+import { useDimensionUnit } from "./useDimensionUnit"
 
 const RoomCanvas = dynamic(
   () =>
@@ -37,17 +42,20 @@ const RoomCanvas = dynamic(
 
 type Draft = {
   name: string
-  lengthCm: string
-  widthCm: string
-  heightCm: string
+  length: string
+  width: string
+  height: string
 }
 
-function roomToDraft(fields: RoomWritableFields): Draft {
+function roomToDraft(
+  fields: RoomWritableFields,
+  unit: DimensionUnit,
+): Draft {
   return {
     name: fields.name,
-    lengthCm: String(fields.lengthCm),
-    widthCm: String(fields.widthCm),
-    heightCm: String(fields.heightCm),
+    length: formatCmForUnit(fields.lengthCm, unit),
+    width: formatCmForUnit(fields.widthCm, unit),
+    height: formatCmForUnit(fields.heightCm, unit),
   }
 }
 
@@ -57,30 +65,56 @@ function parseDimension(raw: string): number {
   return Number(trimmed)
 }
 
-function fieldErrorsForDraft(draft: Draft): FieldErrors {
+function fieldErrorsForDraft(draft: Draft, unit: DimensionUnit): FieldErrors {
   const errors: FieldErrors = {}
   const nameError = validateRoomName(draft.name)
   if (nameError) errors.name = nameError
 
-  const lengthError = validateDimensionCm(parseDimension(draft.lengthCm))
+  const lengthError = validateDimensionInUnit(parseDimension(draft.length), unit)
   if (lengthError) errors.lengthCm = lengthError
 
-  const widthError = validateDimensionCm(parseDimension(draft.widthCm))
+  const widthError = validateDimensionInUnit(parseDimension(draft.width), unit)
   if (widthError) errors.widthCm = widthError
 
-  const heightError = validateDimensionCm(parseDimension(draft.heightCm))
+  const heightError = validateDimensionInUnit(parseDimension(draft.height), unit)
   if (heightError) errors.heightCm = heightError
 
   return errors
 }
 
-function draftToFields(draft: Draft): RoomWritableFields | null {
-  if (Object.keys(fieldErrorsForDraft(draft)).length > 0) return null
+function draftToFields(
+  draft: Draft,
+  unit: DimensionUnit,
+): RoomWritableFields | null {
+  if (Object.keys(fieldErrorsForDraft(draft, unit)).length > 0) return null
+
   return {
     name: draft.name,
-    lengthCm: parseDimension(draft.lengthCm),
-    widthCm: parseDimension(draft.widthCm),
-    heightCm: parseDimension(draft.heightCm),
+    lengthCm: unitToCm(parseDimension(draft.length), unit),
+    widthCm: unitToCm(parseDimension(draft.width), unit),
+    heightCm: unitToCm(parseDimension(draft.height), unit),
+  }
+}
+
+function convertDraftUnit(
+  draft: Draft,
+  fromUnit: DimensionUnit,
+  toUnit: DimensionUnit,
+): Draft {
+  if (fromUnit === toUnit) return draft
+
+  const convertField = (raw: string) => {
+    const value = parseDimension(raw)
+    if (!Number.isFinite(value)) return raw
+    const cm = unitToCm(value, fromUnit)
+    return formatCmForUnit(cm, toUnit)
+  }
+
+  return {
+    ...draft,
+    length: convertField(draft.length),
+    width: convertField(draft.width),
+    height: convertField(draft.height),
   }
 }
 
@@ -99,6 +133,7 @@ export function RoomDetail() {
     id ? state.rooms.find((item) => item.id === id) : undefined,
   )
 
+  const [unit, setUnit] = useDimensionUnit()
   const [mode, setMode] = useState<EditMode>("preview")
   const [draft, setDraft] = useState<Draft | null>(null)
   const [draftRoomId, setDraftRoomId] = useState<string | null>(null)
@@ -110,7 +145,7 @@ export function RoomDetail() {
 
   if (room && draftRoomId !== room.id) {
     setDraftRoomId(room.id)
-    setDraft(roomToDraft(room))
+    setDraft(roomToDraft(room, unit))
     setFieldErrors({})
     setMode("preview")
   }
@@ -120,9 +155,9 @@ export function RoomDetail() {
     setDraft(null)
   }
 
-  async function persist(next: Draft) {
-    const fields = draftToFields(next)
-    setFieldErrors(fieldErrorsForDraft(next))
+  async function persist(next: Draft, activeUnit: DimensionUnit) {
+    const fields = draftToFields(next, activeUnit)
+    setFieldErrors(fieldErrorsForDraft(next, activeUnit))
     if (!fields || !id) return
 
     const current = useRoomsStore.getState().rooms.find((item) => item.id === id)
@@ -148,9 +183,21 @@ export function RoomDetail() {
     setDraft((current) => {
       if (!current) return current
       const next = { ...current, [key]: value }
-      void persist(next)
+      void persist(next, unit)
       return next
     })
+  }
+
+  function handleUnitChange(nextUnit: DimensionUnit) {
+    if (nextUnit === unit) return
+
+    setDraft((current) => {
+      if (!current) return current
+      const converted = convertDraftUnit(current, unit, nextUnit)
+      setFieldErrors(fieldErrorsForDraft(converted, nextUnit))
+      return converted
+    })
+    setUnit(nextUnit)
   }
 
   async function handleDimensionsChange(next: {
@@ -158,12 +205,13 @@ export function RoomDetail() {
     widthCm: number
   }) {
     if (!id) return
+
     setDraft((current) =>
       current
         ? {
             ...current,
-            lengthCm: String(next.lengthCm),
-            widthCm: String(next.widthCm),
+            length: formatCmForUnit(next.lengthCm, unit),
+            width: formatCmForUnit(next.widthCm, unit),
           }
         : current,
     )
@@ -237,12 +285,18 @@ export function RoomDetail() {
     )
   }
 
-  const parsedLength = parseDimension(draft.lengthCm)
-  const parsedWidth = parseDimension(draft.widthCm)
-  const parsedHeight = parseDimension(draft.heightCm)
-  const lengthCm = Number.isFinite(parsedLength) ? parsedLength : room.lengthCm
-  const widthCm = Number.isFinite(parsedWidth) ? parsedWidth : room.widthCm
-  const heightCm = Number.isFinite(parsedHeight) ? parsedHeight : room.heightCm
+  const parsedLength = parseDimension(draft.length)
+  const parsedWidth = parseDimension(draft.width)
+  const parsedHeight = parseDimension(draft.height)
+  const lengthCm = Number.isFinite(parsedLength)
+    ? unitToCm(parsedLength, unit)
+    : room.lengthCm
+  const widthCm = Number.isFinite(parsedWidth)
+    ? unitToCm(parsedWidth, unit)
+    : room.widthCm
+  const heightCm = Number.isFinite(parsedHeight)
+    ? unitToCm(parsedHeight, unit)
+    : room.heightCm
 
   return (
     <main className="shell relative flex flex-1 flex-col">
@@ -275,33 +329,41 @@ export function RoomDetail() {
               onChange={(value) => handleFieldChange("name", value)}
               autoComplete="off"
             />
+
+            <div className="flex flex-col gap-2">
+              <span className="text-xs tracking-wide text-[var(--ink-muted)]">
+                Jednostka
+              </span>
+              <UnitToggle unit={unit} onChange={handleUnitChange} />
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
               <Field
                 id="room-length"
                 label="Długość"
-                suffix="cm"
+                suffix={unit}
                 inputMode="decimal"
-                value={draft.lengthCm}
+                value={draft.length}
                 error={fieldErrors.lengthCm}
-                onChange={(value) => handleFieldChange("lengthCm", value)}
+                onChange={(value) => handleFieldChange("length", value)}
               />
               <Field
                 id="room-width"
                 label="Szerokość"
-                suffix="cm"
+                suffix={unit}
                 inputMode="decimal"
-                value={draft.widthCm}
+                value={draft.width}
                 error={fieldErrors.widthCm}
-                onChange={(value) => handleFieldChange("widthCm", value)}
+                onChange={(value) => handleFieldChange("width", value)}
               />
               <Field
                 id="room-height"
                 label="Wysokość"
-                suffix="cm"
+                suffix={unit}
                 inputMode="decimal"
-                value={draft.heightCm}
+                value={draft.height}
                 error={fieldErrors.heightCm}
-                onChange={(value) => handleFieldChange("heightCm", value)}
+                onChange={(value) => handleFieldChange("height", value)}
               />
             </div>
           </form>
