@@ -13,9 +13,20 @@ Homiq to responsive web app (mobile-first), w której użytkownik buduje proste 
 | Edycja wymiarów | Formularz (cm) + tryb „Wymiary” z przeciąganiem ścian; tryb „Podgląd” = orbit |
 | Kamera | Orbit z zewnątrz / lekko z góry, pinch zoom |
 | Zapis | Lokalnie (IndexedDB); konta + sync później |
-| Stack | Next.js (App Router) + TypeScript + React Three Fiber + Drei, Vercel |
-| PWA | Faza 1: zwykła responsive web na Vercel (HTTPS) — test na telefonie przez URL, bez instalowania jako aplikacji. Pełne PWA (manifest, service worker, prompt „Dodaj do ekranu głównego”) = później, gdy będzie sens offline / ikona na home screen |
+| Dystrybucja | PWA (installowalna na telefonie), mobile-first |
+| Stack | Next.js (App Router) + TypeScript + React Three Fiber + Drei + PWA (manifest + service worker), Vercel |
 | Faza 1 scope | Tylko pomieszczenia; produkty nie wchodzą do pierwszego delivery |
+
+## PWA (faza 1)
+
+Homiq jest Progressive Web App: działa w przeglądarce i da się dodać do ekranu głównego telefonu jak aplikację.
+
+- **Web App Manifest** — nazwa Homiq, `display: standalone`, ikony, kolory motywu; język PL.
+- **Service worker** — cache shella aplikacji (HTML/CSS/JS), żeby UI otwierało się offline / przy słabej sieci. Biblioteka: Serwist (`@serwist/next`) albo równoważna pod App Router.
+- **Dane offline** — pomieszczenia żyją w IndexedDB na urządzeniu; SW nie zastępuje bazy, tylko assets. Po instalacji użytkownik ma swoje pokoje lokalnie bez konta.
+- **Install** — standardowy prompt przeglądarki („Dodaj do ekranu głównego”); własny baner install nie jest wymagany w fazie 1.
+- **Vercel** — HTTPS z boxa (wymagane do SW); preview i production jak zwykły Next.js.
+- **Scope T1** — manifest + ikony + rejestracja SW + krótka wzmianka w README (jak zainstalować na iOS/Android).
 
 ## Roadmapa (poza pierwszym delivery)
 
@@ -35,7 +46,6 @@ flowchart LR
 - **Faza 3:** AI — URL lub nazwa → propozycja wymiarów → zatwierdzenie → katalog.
 - **Faza 4:** Okna i drzwi na ścianach (stary plan Homiq).
 - **Faza 5:** Konto + sync w chmurze (migracja z IndexedDB).
-- **PWA (po fazie 1):** web app manifest + service worker (cache shell / opcjonalnie IndexedDB), instalacja na home screen; nie blokuje testów mobile w fazie 1.
 
 ## Architektura fazy 1
 
@@ -78,8 +88,9 @@ Zadania da się brać równolegle po scaffoldzie. Zależności: T1 → reszta; T
 ### T1 — Scaffold i deploy
 - Next.js App Router + TS + ESLint, `app/` layout.
 - Podstawowy branding Homiq (shell, typografia, CSS variables — bez generycznego „AI purple”).
-- Deploy na Vercel (preview + main), README: `npm i`, `npm run dev`, env (na razie brak sekretów).
-- **Done:** pusta strona Homiq działa lokalnie i na Vercel.
+- PWA: `manifest.webmanifest` / Metadata API, ikony, service worker (Serwist), test install / offline shell.
+- Deploy na Vercel (preview + main), README: `npm i`, `npm run dev`, jak zainstalować PWA, env (na razie brak sekretów).
+- **Done:** pusta strona Homiq działa lokalnie i na Vercel jako installowalna PWA.
 
 ### T2 — Model + persistence
 - Typ `Room`, walidacja (np. min 50 cm, max 2000 cm, nazwa niepusta).
@@ -118,7 +129,7 @@ Zadania da się brać równolegle po scaffoldzie. Zależności: T1 → reszta; T
 
 ## Poza zakresem fazy 1
 
-Produkty, AI, okna/drzwi, konta, pełne PWA (manifest / service worker / install prompt), multiplayer, import rzutu PDF.
+Produkty, AI, okna/drzwi, konta, własny UI baner „Zainstaluj aplikację”, multiplayer, import rzutu PDF.
 
 ## Jak pracować w repo
 
