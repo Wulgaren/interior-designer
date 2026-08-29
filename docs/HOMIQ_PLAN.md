@@ -14,6 +14,7 @@ Homiq to responsive web app (mobile-first), w której użytkownik buduje proste 
 | Kamera | Orbit z zewnątrz / lekko z góry, pinch zoom |
 | Zapis | Lokalnie (IndexedDB); konta + sync później |
 | Stack | Next.js (App Router) + TypeScript + React Three Fiber + Drei, Vercel |
+| PWA | Faza 1: zwykła responsive web na Vercel (HTTPS) — test na telefonie przez URL, bez instalowania jako aplikacji. Pełne PWA (manifest, service worker, prompt „Dodaj do ekranu głównego”) = później, gdy będzie sens offline / ikona na home screen |
 | Faza 1 scope | Tylko pomieszczenia; produkty nie wchodzą do pierwszego delivery |
 
 ## Roadmapa (poza pierwszym delivery)
@@ -34,6 +35,7 @@ flowchart LR
 - **Faza 3:** AI — URL lub nazwa → propozycja wymiarów → zatwierdzenie → katalog.
 - **Faza 4:** Okna i drzwi na ścianach (stary plan Homiq).
 - **Faza 5:** Konto + sync w chmurze (migracja z IndexedDB).
+- **PWA (po fazie 1):** web app manifest + service worker (cache shell / opcjonalnie IndexedDB), instalacja na home screen; nie blokuje testów mobile w fazie 1.
 
 ## Architektura fazy 1
 
@@ -116,7 +118,7 @@ Zadania da się brać równolegle po scaffoldzie. Zależności: T1 → reszta; T
 
 ## Poza zakresem fazy 1
 
-Produkty, AI, okna/drzwi, konta, PWA install prompt (można dodać później), multiplayer, import rzutu PDF.
+Produkty, AI, okna/drzwi, konta, pełne PWA (manifest / service worker / install prompt), multiplayer, import rzutu PDF.
 
 ## Jak pracować w repo
 
